@@ -6,39 +6,33 @@ ghettoUI.py
 Interactive frontend for the ghettoVCB and 
 ghettoVCB-restore scripts.
 
-Copyright (c) 2011, Frank Schroeder
+Copyright (C) 2011 by Frank Schroeder
 
-All rights reserved.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-* Redistributions of source code must retain the above copyright notice, 
-  this list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice, 
-  this list of conditions and the following disclaimer in the documentation 
-  and/or other materials provided with the distribution.
- 
-* Neither the name of Frank Schroeder nor the names of its contributors may
-  be used to endorse or promote products derived from this software without
-  specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 """
 
 import sys
 import os
 import re
+import time
+from tempfile import mkstemp
+from datetime import datetime
 
 version = "0.1"
 
@@ -78,13 +72,15 @@ class VM:
 	
 
 class VimCmd:
-	def __init__(self):
-		pass
-
 	def vimcmd(self, arg):
 		return os.popen("/bin/vim-cmd %s" % arg)
 		
 	def getDatastores(self):
+		"""
+		Determines the list of configured datastores.
+		
+		Returns a list of Datastore instances.
+		"""
 		f = self.vimcmd("hostsvc/datastore/listsummary")
 		datastores = []
 		for line in f:
@@ -117,6 +113,11 @@ class VimCmd:
 		return datastores
 
 	def getVMs(self):
+		"""
+		Determines the list of virtual machines in the 
+		inventory of the host and returns a list of 
+		VM instances.
+		"""
 		vms = []
 		s = self.vimcmd("vmsvc/getallvms")
 		for line in s:
@@ -139,7 +140,8 @@ class VimCmd:
 
 class Menu:
 	def header(self):
-		os.system("/bin/sh -c clear");
+		# os.system("/bin/sh -c clear");
+		print
 		print "ghettoVCB Menu %s" % (version)
 		print "------------------"
 		print
@@ -175,11 +177,71 @@ class Menu:
 				pass
 
 	def yesno(self, prompt):
-		options = [(True, "Yes"), (False, "No")]
+		options = [("yes", "Yes"), ("no", "No")]
 		return self.show(prompt, None, options)
 		
 class GhettoVCB:
-	def backup(self, vm, datastore):
+	"""
+	Wrapper class for the ghettoVCB.sh and ghettoVCB-restore.sh
+	scripts. Creates the temporary configuration files and
+	run the scripts.
+	"""
+	
+	
+	def backup(self, vm, datastore, debugLevel):
+		scriptdir = os.path.dirname(__file__)
+		
+		(f, vmfile) = mkstemp(".tmp", "ghettoVCB-vm-")
+		os.write(f, vm.name)
+		os.write(f, "\n")
+		os.close(f)
+		
+		(f, conffile) = mkstemp(".tmp", "ghettoVCB-conf-")
+		os.write(f, "VM_BACKUP_VOLUME=%s/BACKUPS\n" % datastore.url)
+		os.write(f, "DISK_BACKUP_FORMAT=thin\n")
+		os.write(f, "VM_BACKUP_ROTATION_COUNT=3\n")
+		os.write(f, "POWER_VM_DOWN_BEFORE_BACKUP=0\n")
+		os.write(f, "ENABLE_HARD_POWER_OFF=0\n")
+		os.write(f, "ITER_TO_WAIT_SHUTDOWN=3\n")
+		os.write(f, "POWER_DOWN_TIMEOUT=5\n")
+		os.write(f, "ENABLE_COMPRESSION=0\n")
+		os.write(f, "ADAPTER_FORMAT=%s\n" % "lsilogic")
+		os.write(f, "VM_SNAPSHOT_MEMORY=0\n")
+		os.write(f, "VM_SNAPSHOT_QUIESCE=0\n")
+		os.write(f, "ENABLE_NON_PERSISTENT_NFS=0\n")
+		os.write(f, "UNMOUNT_NFS=0\n")
+		os.write(f, "NFS_SERVER=\n")
+		os.write(f, "NFS_MOUNT=\n")
+		os.write(f, "NFS_LOCAL_NAME=\n")
+		os.write(f, "NFS_VM_BACKUP_DIR=\n")
+		os.write(f, "SNAPSHOT_TIMEOUT=15\n")
+		os.write(f, "EMAIL_LOG=0\n")
+		os.write(f, "EMAIL_DEBUG=0\n")
+		os.write(f, "EMAIL_SERVER=\n")
+		os.write(f, "EMAIL_SERVER_PORT=\n")
+		os.write(f, "EMAIL_TO=\n")
+		os.write(f, "EMAIL_FROM=\n")
+		os.close(f)
+		
+		now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+		logdir = "%s/LOGS" % scriptdir
+		logfile = "%s/%s-%s.log" % (logdir, vm.name, now)
+		logfile = re.sub(r"[\s'\"]", "_", logfile)
+		try:
+			os.mkdir(logdir, 0777)
+		except OSError:
+			pass
+		
+		cmdline = "%s/ghettoVCB.sh -f %s -g %s -l %s -d %s" % \
+			(scriptdir, vmfile, conffile, logfile, debugLevel)
+		print cmdline
+		os.system(cmdline)
+			
+		os.unlink(vmfile)
+		os.unlink(conffile)
+		pass
+		
+	def restore(self, vm, datastore):
 		pass
 				
 
@@ -205,8 +267,7 @@ class GhettoUI:
 		options = []
 		for vm in vms:
 			options.append((vm, vm.name))
-		return Menu().show("Select a virtual machine", "Return", options)
-		
+		return Menu().show("Select a virtual machine", "Return", options)		
 			
 	def backup(self):
 		while True:
@@ -217,25 +278,32 @@ class GhettoUI:
 			datastore = self.selectDatastore()
 			if datastore == None:
 				return
-			
-			Menu().yesno("Do you want to backup '%s' onto '%s'?" % (vm.name, datastore.name))
+				
+			options = [
+				('info',   'info   - Standard output'),
+				('debug',  'debug  - Debug output'),
+				('dryrun', 'dryrun - Test only. No backup is performed')
+			]
+			level = Menu().show("Do you want to backup '%s' onto '%s'?" % \
+				(vm.name, datastore.name), "Return", options)
+			if level:
+				GhettoVCB().backup(vm, datastore, level)
+				return
 	
 	def restore(self):
 		pass
-	
-def main():
-	ui = GhettoUI()
-	
-	while True:
-		action = ui.selectAction()
-		if action == "backup":
-			ui.backup()
-		elif action == "restore":
-			ui.restore()
-		elif action == None:
-			return
+		
+	def run(self):
+		while True:
+			action = self.selectAction()
+			if action == "backup":
+				self.backup()
+			elif action == "restore":
+				self.restore()
+			elif action == None:
+				return
 
 
 if __name__ == '__main__':
-	main()
+	GhettoUI().run()
 
