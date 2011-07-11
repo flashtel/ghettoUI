@@ -20,96 +20,96 @@ To perform a restore ghettoUI looks for `BACKUP` directories in all available da
 
 This is a screenshot of a backup procedure
 
-  /vmfs/volumes/23ed4bf3-6292d161 # ls         
-  BACKUPS               LOGS                  ghettoUI              ghettoVCB-restore.sh  ghettoVCB.sh
-  /vmfs/volumes/23ed4bf3-6292d161 # ./ghettoUI 
-  
-  ghettoUI Menu 0.5
-  -----------------
+```/vmfs/volumes/23ed4bf3-6292d161 # ls         
+BACKUPS               LOGS                  ghettoUI              ghettoVCB-restore.sh  ghettoVCB.sh
+/vmfs/volumes/23ed4bf3-6292d161 # ./ghettoUI 
 
-  What do you want to do?
+ghettoUI Menu 0.5
+-----------------
 
-  1. Backup a virtual machine
-  2. Restore a virtual machine
+What do you want to do?
 
-  Q. Quit
+1. Backup a virtual machine
+2. Restore a virtual machine
 
-  > 1
-  ghettoUI Menu 0.5
-  -----------------
+Q. Quit
 
-  Select a virtual machine
+> 1
+ghettoUI Menu 0.5
+-----------------
 
-  1. Ubuntu Server
-  2. Windows XP
-  3. Windows Vista
-  4. Windows 2000
-  5. Windows 7
-  6. server-1
-  7. server-template
-  8. server-2
-  9. server-3
-  10. server-4
-  11. server-5
-  12. server-6
-  13. server-7
-  14. firewall
+Select a virtual machine
 
-  Q. Return
+1. Ubuntu Server
+2. Windows XP
+3. Windows Vista
+4. Windows 2000
+5. Windows 7
+6. server-1
+7. server-template
+8. server-2
+9. server-3
+10. server-4
+11. server-5
+12. server-6
+13. server-7
+14. firewall
 
-  > 12
-  ghettoUI Menu 0.5
-  -----------------
+Q. Return
 
-  Select a datastore
+> 12
+ghettoUI Menu 0.5
+-----------------
 
-  1. datastore1 (VMFS)
-  2. nfs1 (NFS)
+Select a datastore
 
-  Q. Return
+1. datastore1 (VMFS)
+2. nfs1 (NFS)
 
-  > 2
-  ghettoUI Menu 0.5
-  -----------------
+Q. Return
 
-  Do you want to backup 'server-6' onto 'nfs1'?
+> 2
+ghettoUI Menu 0.5
+-----------------
 
-  1. info   - Standard output
-  2. debug  - Debug output
-  3. dryrun - Test only. No backup is performed
+Do you want to backup 'server-6' onto 'nfs1'?
 
-  Q. Return
+1. info   - Standard output
+2. debug  - Debug output
+3. dryrun - Test only. No backup is performed
 
-  > 1
-  2011-07-11 20:21:56 -- info: ============================== ghettoVCB LOG START ==============================
+Q. Return
 
-  ...
+> 1
+2011-07-11 20:21:56 -- info: == ghettoVCB LOG START ==
 
-  2011-07-11 20:21:58 -- info: Initiate backup for server-6
-  2011-07-11 20:21:58 -- info: Creating Snapshot "ghettoVCB-snapshot-2011-07-11" for server-6
-  Destination disk format: VMFS thin-provisioned
-  Cloning disk '/vmfs/volumes/datastore1/server-6/server-6.vmdk'...
-  Clone: 94% done.
-  2011-07-11 20:23:46 -- info: Removing snapshot from server-6 ...
-  2011-07-11 20:23:46 -- info: Backup Duration: 1.80 Minutes
-  2011-07-11 20:23:47 -- info: Successfully completed backup for server-6!
-  2011-07-11 20:23:48 -- info: ###### Final status: All VMs backed up OK! ######
+...
 
-  2011-07-11 20:23:48 -- info: ============================== ghettoVCB LOG END ================================
+2011-07-11 20:21:58 -- info: Initiate backup for server-6
+2011-07-11 20:21:58 -- info: Creating Snapshot "ghettoVCB-snapshot-2011-07-11" for server-6
+Destination disk format: VMFS thin-provisioned
+Cloning disk '/vmfs/volumes/datastore1/server-6/server-6.vmdk'...
+Clone: 94% done.
+2011-07-11 20:23:46 -- info: Removing snapshot from server-6 ...
+2011-07-11 20:23:46 -- info: Backup Duration: 1.80 Minutes
+2011-07-11 20:23:47 -- info: Successfully completed backup for server-6!
+2011-07-11 20:23:48 -- info: ###### Final status: All VMs backed up OK! ######
 
-  ghettoUI Menu 0.5
-  -----------------
+2011-07-11 20:23:48 -- info: == ghettoVCB LOG END ==
 
-  What do you want to do?
+ghettoUI Menu 0.5
+-----------------
 
-  1. Backup a virtual machine
-  2. Restore a virtual machine
+What do you want to do?
 
-  Q. Quit
+1. Backup a virtual machine
+2. Restore a virtual machine
 
-  > q
-  /vmfs/volumes/23ed4bf3-6292d161 # 
-  
+Q. Quit
+
+> q
+/vmfs/volumes/23ed4bf3-6292d161 # 
+```  
 
 ### Known pitfalls
 
