@@ -1,0 +1,215 @@
+#!/usr/bin/env python
+# encoding: utf-8
+"""
+backup.py
+
+Convenience interface for the ghettoVCB.sh
+script.
+
+Created by Frank Schroeder on 2011-07-08.
+Copyright (c) 2011 go-left.com. All rights reserved.
+"""
+
+import sys
+import os
+import re
+
+version = "0.1"
+
+class Datastore:
+	def __init__(self):
+		self.name = ""
+		self.url = ""
+		self.type = ""
+		self.capacity = 0
+		self.freeSpace = 0
+		self.accessible = False
+
+	def __str__(self):
+		return "{name=%s, url=%s, type=%s, capacity=%d, freeSpace=%d, accessible=%s}" % \
+			(self.name, self.url, self.type, self.capacity, self.freeSpace, self.accessible)
+
+	def __repr__(self):
+	    return self.__str__()
+		
+
+class VM:
+	def __init__(self):
+		self.vmid = -1
+		self.name = ''
+		self.datastore = ''
+		self.vmxFile = ''
+		self.guestOS = ''
+		self.version = ''
+		self.annotation = ''
+		
+	def __str__(self):
+		return "{vmid=%s, name='%s', datastore=%s, vmxFile='%s', guestOS=%s, version=%s}" % \
+			(self.vmid, self.name, self.datastore, self.vmxFile, self.guestOS, self.version)
+	
+	def __repr__(self):
+	    return self.__str__()
+	
+
+class VimCmd:
+	def __init__(self):
+		pass
+
+	def vimcmd(self, arg):
+		return os.popen("/bin/vim-cmd %s" % arg)
+		
+	def getDatastores(self):
+		f = self.vimcmd("hostsvc/datastore/listsummary")
+		datastores = []
+		for line in f:
+			m = re.search(r'name = "(.*)",', line)
+			if m:
+				datastore = Datastore()
+				datastores.append(datastore)
+				datastore.name = m.group(1)
+				
+			m = re.search(r'url = "(.*)",', line);
+			if m:
+				datastore.url = m.group(1)
+
+			m = re.search(r'capacity = (\d+),', line);
+			if m:
+				datastore.capacity = int(m.group(1))
+
+			m = re.search(r'freeSpace = (\d+),', line);
+			if m:
+				datastore.freeSpace = int(m.group(1))
+
+			m = re.search(r'accessible = (true|false),', line);
+			if m:
+				datastore.accessible = (m.group(1) == "true")
+
+			m = re.search(r'type = "(.*)",', line)
+			if m:
+				datastore.type = m.group(1)
+
+		return datastores
+
+	def getVMs(self):
+		vms = []
+		s = self.vimcmd("vmsvc/getallvms")
+		for line in s:
+			l = re.findall(r"(\d+)\s+(.+\w)\s+\[(\w+)\]\s+(.*\.vmx)\s+(\w+Guest)\s+(vmx-\d+)\s+(.*)\n", line)
+			if (len(l) == 0):
+				continue
+			x = l[0]
+			
+			vm = VM()
+			vm.vmid = x[0]
+			vm.name = x[1]
+			vm.datastore = x[2]
+			vm.vmxFile = x[3]
+			vm.guestOS = x[4]
+			vm.version = x[5]
+			vm.annotation = x[6]
+			vms.append(vm)
+			
+		return vms
+
+class Menu:
+	def header(self):
+		os.system("/bin/sh -c clear");
+		print "ghettoVCB Menu %s" % (version)
+		print "------------------"
+		print
+			
+	def show(self, prompt, returnPrompt, options):
+		while True:
+			# clear screen and show header
+			self.header()
+			
+			print prompt
+			print
+
+			# print the menu
+			i = 0
+			for m in options:
+				i += 1
+				print "%d. %s" % (i, m[1])
+	
+			# print the return prompt
+			if returnPrompt != None:
+				print
+				print "Q. " + returnPrompt
+	
+			# read the input and return the response
+			try:
+				print 
+				answer = raw_input("> ");
+				if returnPrompt != None and (answer == "q" or answer == "Q"):
+					return None
+				elif int(answer) in range(1, i+1):
+					return options[int(answer)-1][0]
+			except:
+				pass
+
+	def yesno(self, prompt):
+		options = [(True, "Yes"), (False, "No")]
+		return self.show(prompt, None, options)
+		
+class GhettoVCB:
+	def backup(self, vm, datastore):
+		pass
+				
+
+
+class GhettoUI:
+
+	def selectAction(self):
+		options = [
+			("backup", "Backup a virtual machine"), 
+			("restore", "Restore a virtual machine")
+		];
+		return Menu().show("What do you want to do?", "Quit", options)
+		
+	def selectDatastore(self):
+		datastores = VimCmd().getDatastores()
+		options = []
+		for datastore in datastores:
+			options.append((datastore, "%s (%s)" % (datastore.name, datastore.type)))
+		return Menu().show("Select a datastore", "Return", options)
+		
+	def selectVm(self):
+		vms = VimCmd().getVMs()
+		options = []
+		for vm in vms:
+			options.append((vm, vm.name))
+		return Menu().show("Select a virtual machine", "Return", options)
+		
+			
+	def backup(self):
+		while True:
+			vm = self.selectVm()
+			if vm == None:
+				return
+				
+			datastore = self.selectDatastore()
+			if datastore == None:
+				return
+			
+			Menu().yesno("Do you want to backup '%s' onto '%s'?" % (vm.name, datastore.name))
+	
+	def restore(self):
+		pass
+	
+def main():
+	ui = GhettoUI()
+	
+	while True:
+		action = ui.selectAction()
+		if action == "backup":
+			ui.backup()
+		elif action == "restore":
+			ui.restore()
+		elif action == None:
+			return
+
+
+if __name__ == '__main__':
+	main()
+
