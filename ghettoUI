@@ -36,6 +36,21 @@ from datetime import datetime
 
 version = "0.1"
 
+class Backup:
+	def __init__(self):
+		self.name = ""
+		self.datastore = ""
+		self.datetime = ""
+		self.status = ""
+		self.backupdir = ""
+
+	def __str__(self):
+		return "{name=%s, datastore=%s, backupdir=%s, datetime=%s, status=%s}" % \
+			(self.name, self.datastore, self.backupdir, self.datetime, self.status)
+
+	def __repr__(self):
+	    return self.__str__()
+
 class Datastore:
 	def __init__(self):
 		self.name = ""
@@ -187,10 +202,23 @@ class GhettoVCB:
 	run the scripts.
 	"""
 	
+	def __init__(self):
+		self.scriptdir = os.path.abspath(os.path.dirname(__file__))
+		
+		
+	def logfile(self, name, postfix):
+		now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+		logdir = "%s/LOGS" % self.scriptdir
+		logfile = "%s/%s-%s-%s.log" % (logdir, name, postfix, now)
+		try:
+			os.mkdir(logdir, 0777)
+		except OSError:
+			pass
+			
+		return logfile
+		
 	
 	def backup(self, vm, datastore, debugLevel):
-		scriptdir = os.path.dirname(__file__)
-		
 		(f, vmfile) = mkstemp(".tmp", "ghettoVCB-vm-")
 		os.write(f, vm.name)
 		os.write(f, "\n")
@@ -223,27 +251,27 @@ class GhettoVCB:
 		os.write(f, "EMAIL_FROM=\n")
 		os.close(f)
 		
-		now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-		logdir = "%s/LOGS" % scriptdir
-		logfile = "%s/%s-%s.log" % (logdir, vm.name, now)
-		logfile = re.sub(r"[\s'\"]", "_", logfile)
-		try:
-			os.mkdir(logdir, 0777)
-		except OSError:
-			pass
-		
-		cmdline = "%s/ghettoVCB.sh -f %s -g %s -l %s -d %s" % \
-			(scriptdir, vmfile, conffile, logfile, debugLevel)
+		logfile = self.logfile(vm.name, "backup")	
+		cmdline = "%s/ghettoVCB.sh -f '%s' -g '%s' -l '%s' -d '%s'" % \
+			(self.scriptdir, vmfile, conffile, logfile, debugLevel)
 		print cmdline
-		os.system(cmdline)
-			
+		os.system(cmdline)			
 		os.unlink(vmfile)
 		os.unlink(conffile)
 		pass
 		
-	def restore(self, vm, datastore):
+	def restore(self, backup, datastore):
+		(f, restorefile) = mkstemp(".tmp", "ghettoVCB-restore-")
+		os.write(f, "\"%s;%s;%d\"\n" % (backup.dir, datastore.url, 3))
+		os.close(f)
+		
+		logfile = self.logfile(backup.name, "restore")	
+		cmdline = "%s/ghettoVCB-restore.sh -c '%s' -l '%s'" % \
+			(self.scriptdir, restorefile, logfile)
+		print cmdline
+		os.system(cmdline)			
+		os.unlink(restorefile)
 		pass
-				
 
 
 class GhettoUI:
@@ -291,8 +319,40 @@ class GhettoUI:
 				return
 	
 	def restore(self):
-		pass
-		
+		while True:
+			datastores = VimCmd().getDatastores()		
+	 		backups = []
+			for datastore in datastores:
+				datastorebackupdir = "%s/BACKUPS" % datastore.url
+				vms = os.listdir(datastorebackupdir)
+				for vm in vms:
+					vmbackupdir = "%s/BACKUPS/%s" % (datastore.url, vm)
+					dirs = os.listdir(vmbackupdir) 
+					for backupdir in dirs: 
+						backup = Backup()
+						backup.name = vm
+						backup.dir = "%s/%s" % (vmbackupdir, backupdir)
+						backup.datastore = datastore
+						backup.datetime = backupdir
+						backups.append(backup)
+					
+			options = []
+			for backup in backups:
+				options.append((backup, "%s (%s)" % (backup.name, backup.datetime)))
+			
+			backup = Menu().show("Select a backup to restore", "Return", options)
+			if backup == None:
+				return
+				
+			datastore = self.selectDatastore()
+			if datastore == None: 
+				return;
+				
+			yesno = Menu().yesno("Do you want to restore '%s' to '%s'?" % (backup.datetime, datastore.name))
+			if yesno == "yes":
+				GhettoVCB().restore(backup, datastore)
+				return
+				
 	def run(self):
 		while True:
 			action = self.selectAction()
