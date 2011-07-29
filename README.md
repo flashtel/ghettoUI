@@ -16,7 +16,7 @@ To perform a backup **ghettoUI** lists the available virtual machines and datast
 
 **ghettoUI** first checks if a configuration file **conf/${vm.name}.conf** exists, then it looks for **conf/default.conf**. If neither of them can be found then the builtin configuration is used.
 
-To perform a restore ghettoUI looks for **BACKUPS** directories in all available datastores. It assumes the directory structure **/path/to/datastore/BACKUPS/vm/backup** and presents the user with an interactive menu. After the user has made a choice **ghettoUI** again creates the necessary configuration files and runs the **ghettoVCB-restore.sh** script.
+To perform a restore ghettoUI looks for **BACKUPS** directories in all available datastores. This name is configurable in the **backupDir** variable at the top of the script. It assumes the directory structure **/path/to/datastore/BACKUPS/vm/backup** and presents the user with an interactive menu. After the user has made a choice **ghettoUI** again creates the necessary configuration files and runs the **ghettoVCB-restore.sh** script.
 
 ## Screenshot
 
