@@ -18,6 +18,31 @@ To perform a backup **ghettoUI** lists the available virtual machines and datast
 
 To perform a restore ghettoUI looks for **BACKUPS** directories in all available datastores. This name is configurable in the **backupDir** variable at the top of the script. It assumes the directory structure **/path/to/datastore/BACKUPS/vm/backup** and presents the user with an interactive menu. After the user has made a choice **ghettoUI** again creates the necessary configuration files and runs the **ghettoVCB-restore.sh** script.
 
+## Version History
+
+0.7.1 - 29 Jul 2011
+-------------------
+
+ * Fixed the string formatting bug in reviewConfiguration()
+
+0.7 - 29 Jul 2011
+-----------------
+
+ * Added support for external configuration files
+ * Added support for reviewing the configuration prior to backup
+ * Added menu defaults
+ 
+0.6 - 28 Jul 2011
+-----------------
+
+ * Fixed handling of VMs with spaces in their names
+ * Fixed handling of inaccessible NFS datastores
+
+0.5 - 11 Jul 2011
+-----------------
+
+ * First useful version
+
 ## Screenshot
 
 Below is a screenshot of a backup procedure
@@ -241,26 +266,6 @@ What do you want to do?
 * **ghettoUI** currently has a hardcoded configuration for the restore for all virtual machines. See the `GhettoVCB.restore()` methods for details
 
 * **ghettoUI** does not check if a restore is possible, i.e. if there is not already a virtual machine with the same name on the same datastore
-
-## Version History
-
-0.7 - 29 Jul 2011
------------------
-
- * Added support for external configuration files
- * Added support for reviewing the configuration prior to backup
- * Added menu defaults
- 
-0.6 - 28 Jul 2011
------------------
-
- * Fixed handling of VMs with spaces in their names
- * Fixed handling of inaccessible NFS datastores
-
-0.5 - 11 Jul 2011
------------------
-
- * First useful version
 
 ## License
 
