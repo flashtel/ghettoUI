@@ -42,7 +42,7 @@ import time
 import tempfile
 from datetime import datetime
 
-version = "0.7"
+version = "0.7.1"
 
 # subdirectory for backups on the datastore
 backupDir = "BACKUPS"
@@ -453,7 +453,7 @@ class GhettoUI:
 			confName = "builtin"
 			# create the configuration file with the backup config parameters
 			(f, conffile) = mkstemp(".tmp", "ghettoVCB-conf-")
-			os.write(f, "VM_BACKUP_VOLUME=%s/%s\n" % datastore.niceUrl(), backupDir)
+			os.write(f, "VM_BACKUP_VOLUME=%s/%s\n" % (datastore.niceUrl(), backupDir))
 			os.write(f, "DISK_BACKUP_FORMAT=thin\n")
 			os.write(f, "VM_BACKUP_ROTATION_COUNT=3\n")
 			os.write(f, "POWER_VM_DOWN_BEFORE_BACKUP=0\n")
