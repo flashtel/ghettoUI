@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-# vim: ts=4:noexpandtab:
+# vim: ts=4:sw=4:noexpandtab:
 """
 ghettoUI.py
 
@@ -35,14 +35,35 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
+import signal
 import sys
 import os
 import re
 import time
-from tempfile import mkstemp
+import tempfile
 from datetime import datetime
 
-version = "0.6"
+version = "0.7"
+
+# subdirectory for backups on the datastore
+backupDir = "BACKUPS"
+
+# names of temporary files to clean up on exit
+tempfiles = []
+
+def cleanup():
+	"""
+	Cleanup function.
+	Called when the process exits
+	"""
+	for f in tempfiles:
+		os.unlink(f)
+
+def mkstemp(postfix, prefix):
+	(f, filename) = tempfile.mkstemp(postfix, prefix)
+	tempfiles.append(filename)
+	return (f, filename)
+	
 
 class Backup:
 	"""
@@ -73,6 +94,9 @@ class Datastore:
 		self.capacity = 0
 		self.freeSpace = 0
 		self.accessible = False
+
+	def niceUrl(self):
+		return "/vmfs/volumes/%s" % self.name
 
 	def __str__(self):
 		return "{name=%s, url=%s, type=%s, capacity=%d, freeSpace=%d, accessible=%s}" % \
@@ -163,8 +187,9 @@ class VimCmd:
 		"""
 		vms = []
 		f = self.vimcmd("vmsvc/getallvms")
+		pattern = r"(\d+)\s+(.*)\s+\[([-_\w]+)\]\s+(.*\.vmx)\s+(\w+Guest)\s+(vmx-\d+)\s+(.*)\n"
 		for line in f:
-			l = re.findall(r"(\d+)\s+(.*)\s+\[([-_\w]+)\]\s+(.*\.vmx)\s+(\w+Guest)\s+(vmx-\d+)\s+(.*)\n", line)
+			l = re.findall(pattern, line)
 			if (len(l) == 0):
 				continue
 			x = l[0]
@@ -206,7 +231,7 @@ class Menu:
 		print
 
 
-	def show(self, prompt, returnPrompt, options):
+	def show(self, prompt, returnPrompt, options, default):
 		"""
 		Shows an interactive menu of the options.
 		The options are tuples of the form (value, text)
@@ -224,20 +249,31 @@ class Menu:
 			self.header(prompt, False)
 
 			# print the menu
+			defaultIdx = -1
 			i = 0
 			for m in options:
 				i += 1
-				print "%d. %s" % (i, m[1])
+				if m[0] == default:
+					defaultIdx = i
+					print "* %d. %s" % (i, m[1])
+				else:
+					print "  %d. %s" % (i, m[1])
 
 			# print the return prompt
 			if returnPrompt != None:
 				print
-				print "Q. " + returnPrompt
+				print "  Q. " + returnPrompt
 
 			# read the input and return the response
 			try:
 				print
-				answer = raw_input("> ");
+				if defaultIdx > 0:
+					answer = raw_input("(ENTER: %d) > " % defaultIdx)
+					if answer == '':
+						answer = defaultIdx
+				else:
+					answer = raw_input("> ")
+
 				if returnPrompt != None and (answer == "q" or answer == "Q"):
 					return None
 				elif int(answer) in range(1, i+1):
@@ -245,13 +281,13 @@ class Menu:
 			except:
 				pass
 
-	def yesno(self, prompt):
+	def yesno(self, prompt, default):
 		"""
 		Shows a simple yes/no menu and returns either
 		'yes' or 'no'
 		"""
 		options = [("yes", "Yes"), ("no", "No")]
-		return self.show(prompt, None, options)
+		return self.show(prompt, None, options, default)
 
 
 
@@ -284,7 +320,7 @@ class GhettoVCB:
 		return logfile
 
 
-	def backup(self, vm, datastore, debugLevel):
+	def backup(self, vm, datastore, conffile, debugLevel):
 		"""
 		Performs a backup of a single VM to the given
 		datastore. The parameters of the backup are
@@ -304,44 +340,11 @@ class GhettoVCB:
 		os.write(f, "\n")
 		os.close(f)
 
-		# create the configuration file with the backup config parameters
-		(f, conffile) = mkstemp(".tmp", "ghettoVCB-conf-")
-		os.write(f, "VM_BACKUP_VOLUME=%s/BACKUPS\n" % datastore.url)
-		os.write(f, "DISK_BACKUP_FORMAT=thin\n")
-		os.write(f, "VM_BACKUP_ROTATION_COUNT=3\n")
-		os.write(f, "POWER_VM_DOWN_BEFORE_BACKUP=0\n")
-		os.write(f, "ENABLE_HARD_POWER_OFF=0\n")
-		os.write(f, "ITER_TO_WAIT_SHUTDOWN=3\n")
-		os.write(f, "POWER_DOWN_TIMEOUT=5\n")
-		os.write(f, "ENABLE_COMPRESSION=0\n")
-		os.write(f, "ADAPTER_FORMAT=%s\n" % "lsilogic")
-		os.write(f, "VM_SNAPSHOT_MEMORY=0\n")
-		os.write(f, "VM_SNAPSHOT_QUIESCE=0\n")
-		os.write(f, "ENABLE_NON_PERSISTENT_NFS=0\n")
-		os.write(f, "UNMOUNT_NFS=0\n")
-		os.write(f, "NFS_SERVER=\n")
-		os.write(f, "NFS_MOUNT=\n")
-		os.write(f, "NFS_LOCAL_NAME=\n")
-		os.write(f, "NFS_VM_BACKUP_DIR=\n")
-		os.write(f, "SNAPSHOT_TIMEOUT=15\n")
-		os.write(f, "EMAIL_LOG=0\n")
-		os.write(f, "EMAIL_DEBUG=0\n")
-		os.write(f, "EMAIL_SERVER=\n")
-		os.write(f, "EMAIL_SERVER_PORT=\n")
-		os.write(f, "EMAIL_TO=\n")
-		os.write(f, "EMAIL_FROM=\n")
-		os.close(f)
-
 		# run the script
 		logfile = self.logfile(vm.name, "backup")
 		cmdline = "%s/ghettoVCB.sh -f '%s' -g '%s' -l '%s' -d '%s'" % \
 			(self.scriptdir, vmfile, conffile, logfile, debugLevel)
-		# print cmdline
 		os.system(cmdline)
-
-		# cleanup
-		os.unlink(vmfile)
-		os.unlink(conffile)
 
 
 	def restore(self, backup, datastore):
@@ -357,11 +360,7 @@ class GhettoVCB:
 		logfile = self.logfile(backup.name, "restore")
 		cmdline = "%s/ghettoVCB-restore.sh -c '%s' -l '%s'" % \
 			(self.scriptdir, restorefile, logfile)
-		# print cmdline
-
-		# cleanup
 		os.system(cmdline)
-		os.unlink(restorefile)
 
 
 class GhettoUI:
@@ -388,9 +387,14 @@ class GhettoUI:
 				('dryrun', 'dryrun - Test only. No backup is performed')
 			]
 			level = Menu().show("Do you want to backup '%s' onto '%s'?" % \
-				(vm.name, datastore.name), "Return", options)
-			if level:
-				GhettoVCB().backup(vm, datastore, level)
+				(vm.name, datastore.name), "Return", options, "dryrun")
+
+			if level == None:
+				return
+
+			conffile = self.reviewConfiguration(vm, datastore)
+			if conffile != None:
+				GhettoVCB().backup(vm, datastore, conffile, level)
 				return
 
 	def actionRestore(self):
@@ -401,11 +405,11 @@ class GhettoUI:
 			datastores = VimCmd().getDatastores()
 			backups = []
 			for datastore in datastores:
-				datastorebackupdir = "%s/BACKUPS" % datastore.url
+				datastorebackupdir = "%s/%s" % (datastore.url, backupDir)
 				try:
 					vms = os.listdir(datastorebackupdir)
 					for vm in vms:
-						vmbackupdir = "%s/BACKUPS/%s" % (datastore.url, vm)
+						vmbackupdir = "%s/%s/%s" % (datastore.url, backupDir, vm)
 						dirs = os.listdir(vmbackupdir)
 						for backupdir in dirs:
 							backup = Backup()
@@ -416,11 +420,12 @@ class GhettoUI:
 							backups.append(backup)
 				except OSError:
 					print "error"
+
 			options = []
 			for backup in backups:
 				options.append((backup, "%s (%s)" % (backup.name, backup.datetime)))
 
-			backup = Menu().show("Select a backup to restore", "Return", options)
+			backup = Menu().show("Select a backup to restore", "Return", options, None)
 			if backup == None:
 				return
 
@@ -428,10 +433,73 @@ class GhettoUI:
 			if datastore == None:
 				return;
 
-			yesno = Menu().yesno("Do you want to restore '%s' to '%s'?" % (backup.datetime, datastore.name))
+			yesno = Menu().yesno("Do you want to restore '%s' to '%s'?" % \
+				(backup.datetime, datastore.name), None)
 			if yesno == "yes":
 				GhettoVCB().restore(backup, datastore)
 				return
+
+	def reviewConfiguration(self, vm, datastore):
+		confDefault = "conf/default.conf"
+		confVm = "conf/%s.conf" % vm.name
+		confName = ""
+
+		if os.path.exists(confVm):
+			conffile = confVm
+			confName = vm.name
+		elif os.path.exists(confDefault):
+			conffile = confDefault
+			confName = "default"
+		else:
+			confName = "builtin"
+			# create the configuration file with the backup config parameters
+			(f, conffile) = mkstemp(".tmp", "ghettoVCB-conf-")
+			os.write(f, "VM_BACKUP_VOLUME=%s/%s\n" % datastore.niceUrl(), backupDir)
+			os.write(f, "DISK_BACKUP_FORMAT=thin\n")
+			os.write(f, "VM_BACKUP_ROTATION_COUNT=3\n")
+			os.write(f, "POWER_VM_DOWN_BEFORE_BACKUP=0\n")
+			os.write(f, "ENABLE_HARD_POWER_OFF=0\n")
+			os.write(f, "ITER_TO_WAIT_SHUTDOWN=3\n")
+			os.write(f, "POWER_DOWN_TIMEOUT=5\n")
+			os.write(f, "ENABLE_COMPRESSION=0\n")
+			os.write(f, "ADAPTER_FORMAT=%s\n" % "lsilogic")
+			os.write(f, "VM_SNAPSHOT_MEMORY=0\n")
+			os.write(f, "VM_SNAPSHOT_QUIESCE=0\n")
+			os.write(f, "ENABLE_NON_PERSISTENT_NFS=0\n")
+			os.write(f, "UNMOUNT_NFS=0\n")
+			os.write(f, "NFS_SERVER=\n")
+			os.write(f, "NFS_MOUNT=\n")
+			os.write(f, "NFS_LOCAL_NAME=\n")
+			os.write(f, "NFS_VM_BACKUP_DIR=\n")
+			os.write(f, "SNAPSHOT_TIMEOUT=15\n")
+			os.write(f, "EMAIL_LOG=0\n")
+			os.write(f, "EMAIL_DEBUG=0\n")
+			os.write(f, "EMAIL_SERVER=\n")
+			os.write(f, "EMAIL_SERVER_PORT=\n")
+			os.write(f, "EMAIL_TO=\n")
+			os.write(f, "EMAIL_FROM=\n")
+			os.close(f)
+
+		options = [
+			("review", "Review configuration '%s' (%s)" % (confName, conffile)),
+			("start", "Start backup")
+		]
+		while True:
+			answer = Menu().show("Start backup", "Return", options, "start")
+
+			if answer == "review":
+				print
+				print "--- %s ---" % conffile
+				f = open(conffile)
+				for line in f:
+					print line.rstrip()
+				print "--- %s ---" % conffile
+				print
+				raw_input('Press ENTER to continue')
+			elif answer == "start":
+				return conffile
+			else:
+				return None
 
 	def selectAction(self):
 		"""
@@ -441,7 +509,7 @@ class GhettoUI:
 			("backup", "Backup a virtual machine"),
 			("restore", "Restore a virtual machine")
 		];
-		return Menu().show("What do you want to do?", "Quit", options)
+		return Menu().show("What do you want to do?", "Quit", options, "backup")
 
 
 	def selectDatastore(self):
@@ -454,7 +522,7 @@ class GhettoUI:
 		for datastore in datastores:
 			if datastore.accessible:
 				options.append((datastore, "%s (%s)" % (datastore.name, datastore.type)))
-		return Menu().show("Select a datastore", "Return", options)
+		return Menu().show("Select a datastore", "Return", options, None)
 
 
 	def selectVm(self):
@@ -465,8 +533,8 @@ class GhettoUI:
 		options = []
 		for vm in vms:
 			options.append((vm, vm.name))
-		return Menu().show("Select a virtual machine", "Return", options)
-
+		return Menu().show("Select a virtual machine", "Return", options, None)
+	
 	def run(self):
 		"""
 		Main runloop.
@@ -479,8 +547,12 @@ class GhettoUI:
 				self.actionRestore()
 			elif action == None:
 				return
+				cleanup()
 
+def main():
+	GhettoUI().run()
+	cleanup()
 
 if __name__ == '__main__':
-	GhettoUI().run()
+	main()
 
