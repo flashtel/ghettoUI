@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # encoding: utf-8
+# vim: ts=4:noexpandtab:
 """
 ghettoUI.py
 
-Interactive frontend for the ghettoVCB and 
+Interactive frontend for the ghettoVCB and
 ghettoVCB-restore scripts.
 
 This script allows to perform interactive backups
 and restores of a single virtual machine using
 the ghettoVCB.sh and ghettoVCB-restore.sh scripts
 by William Lam (http://www.virtualghetto.com/).
-
 
 
 
@@ -42,7 +42,7 @@ import time
 from tempfile import mkstemp
 from datetime import datetime
 
-version = "0.5"
+version = "0.6"
 
 class Backup:
 	"""
@@ -60,7 +60,7 @@ class Backup:
 			(self.name, self.datastore, self.backupdir, self.datetime, self.status)
 
 	def __repr__(self):
-	    return self.__str__()
+		return self.__str__()
 
 class Datastore:
 	"""
@@ -79,8 +79,8 @@ class Datastore:
 			(self.name, self.url, self.type, self.capacity, self.freeSpace, self.accessible)
 
 	def __repr__(self):
-	    return self.__str__()
-		
+		return self.__str__()
+
 
 class VM:
 	"""
@@ -94,33 +94,33 @@ class VM:
 		self.guestOS = ''
 		self.version = ''
 		self.annotation = ''
-		
+
 	def __str__(self):
 		return "{vmid=%s, name='%s', datastore=%s, vmxFile='%s', guestOS=%s, version=%s}" % \
 			(self.vmid, self.name, self.datastore, self.vmxFile, self.guestOS, self.version)
-	
+
 	def __repr__(self):
-	    return self.__str__()
-	
+		return self.__str__()
+
 
 class VimCmd:
 	"""
-	Wrapper class for accessing status information of 
+	Wrapper class for accessing status information of
 	the VMware ESXi host through the vim-cmd command
 	"""
-	
-	
+
+
 	def vimcmd(self, arg):
 		"""
 		Executes the /bin/vim-cmd with the given arguments
 		"""
 		return os.popen("/bin/vim-cmd %s" % arg)
-		
-		
+
+
 	def getDatastores(self):
 		"""
 		Determines the list of configured datastores.
-		
+
 		Returns a list of Datastore entities.
 		"""
 		datastores = []
@@ -131,7 +131,7 @@ class VimCmd:
 				datastore = Datastore()
 				datastores.append(datastore)
 				datastore.name = m.group(1)
-				
+
 			m = re.search(r'url = "(.*)",', line);
 			if m:
 				datastore.url = m.group(1)
@@ -157,28 +157,28 @@ class VimCmd:
 
 	def getVMs(self):
 		"""
-		Determines the list of virtual machines in the 
-		inventory of the host and returns a list of 
+		Determines the list of virtual machines in the
+		inventory of the host and returns a list of
 		VM entities.
 		"""
 		vms = []
 		f = self.vimcmd("vmsvc/getallvms")
 		for line in f:
-			l = re.findall(r"(\d+)\s+(.+\w)\s+\[(\w+)\]\s+(.*\.vmx)\s+(\w+Guest)\s+(vmx-\d+)\s+(.*)\n", line)
+			l = re.findall(r"(\d+)\s+(.*)\s+\[([-_\w]+)\]\s+(.*\.vmx)\s+(\w+Guest)\s+(vmx-\d+)\s+(.*)\n", line)
 			if (len(l) == 0):
 				continue
 			x = l[0]
-			
+
 			vm = VM()
-			vm.vmid = x[0]
-			vm.name = x[1]
-			vm.datastore = x[2]
-			vm.vmxFile = x[3]
-			vm.guestOS = x[4]
-			vm.version = x[5]
-			vm.annotation = x[6]
+			vm.vmid = x[0].strip()
+			vm.name = x[1].strip()
+			vm.datastore = x[2].strip()
+			vm.vmxFile = x[3].strip()
+			vm.guestOS = x[4].strip()
+			vm.version = x[5].strip()
+			vm.annotation = x[6].strip()
 			vms.append(vm)
-			
+
 		return vms
 
 
@@ -186,38 +186,38 @@ class VimCmd:
 class Menu:
 	"""
 	Interactive menu class.
-	
+
 	Can display a numbered menu and a yes/no question.
 	"""
-	
-	
+
+
 	def header(self, prompt, clearscreen):
 		"""
 		Prints a header with a version number
 		"""
 		if clearscreen:
 			os.system("/bin/sh -c clear");
-			
+
 		print
 		print "ghettoUI Menu %s" % (version)
 		print "-----------------"
 		print
 		print prompt
 		print
-		
-			
+
+
 	def show(self, prompt, returnPrompt, options):
 		"""
 		Shows an interactive menu of the options.
 		The options are tuples of the form (value, text)
 		where 'value' is the value to return if that item
 		was selected and 'text' is the text to display.
-		
+
 		'prompt' is the prompt the user is shown.
-		
+
 		When 'returnPrompt' is set an additional item
 		with the value 'q' is added to the menu which
-		allows to return or quit.		
+		allows to return or quit.
 		"""
 		while True:
 			# print header and prompt
@@ -228,15 +228,15 @@ class Menu:
 			for m in options:
 				i += 1
 				print "%d. %s" % (i, m[1])
-	
+
 			# print the return prompt
 			if returnPrompt != None:
 				print
 				print "Q. " + returnPrompt
-	
+
 			# read the input and return the response
 			try:
-				print 
+				print
 				answer = raw_input("> ");
 				if returnPrompt != None and (answer == "q" or answer == "Q"):
 					return None
@@ -252,21 +252,21 @@ class Menu:
 		"""
 		options = [("yes", "Yes"), ("no", "No")]
 		return self.show(prompt, None, options)
-		
-		
-		
+
+
+
 class GhettoVCB:
 	"""
 	Wrapper class for the ghettoVCB.sh and ghettoVCB-restore.sh
 	scripts. Creates temporary configuration files and
 	runs the scripts.
 	"""
-	
-	
-	def __init__(self):		
+
+
+	def __init__(self):
 		self.scriptdir = os.path.abspath(os.path.dirname(__file__))
-		
-		
+
+
 	def logfile(self, name, postfix):
 		"""
 		Creates a filename for a logfile of the form
@@ -280,10 +280,10 @@ class GhettoVCB:
 			os.mkdir(logdir, 0777)
 		except OSError:
 			pass
-			
+
 		return logfile
-		
-	
+
+
 	def backup(self, vm, datastore, debugLevel):
 		"""
 		Performs a backup of a single VM to the given
@@ -291,19 +291,19 @@ class GhettoVCB:
 		currently hardcoded and the VM is not stopped
 		during the backup. Controller and VMDK type are
 		hard-coded.
-		
+
 		This should probably use a conf directory
-		with VM specific configuration and only 
-		default to a default configuration if 
-		nothing was found.		
+		with VM specific configuration and only
+		default to a default configuration if
+		nothing was found.
 		"""
-		
+
 		# create the configuration file with the virtual machine name
 		(f, vmfile) = mkstemp(".tmp", "ghettoVCB-vm-")
 		os.write(f, vm.name)
 		os.write(f, "\n")
 		os.close(f)
-		
+
 		# create the configuration file with the backup config parameters
 		(f, conffile) = mkstemp(".tmp", "ghettoVCB-conf-")
 		os.write(f, "VM_BACKUP_VOLUME=%s/BACKUPS\n" % datastore.url)
@@ -331,19 +331,19 @@ class GhettoVCB:
 		os.write(f, "EMAIL_TO=\n")
 		os.write(f, "EMAIL_FROM=\n")
 		os.close(f)
-		
+
 		# run the script
-		logfile = self.logfile(vm.name, "backup")	
+		logfile = self.logfile(vm.name, "backup")
 		cmdline = "%s/ghettoVCB.sh -f '%s' -g '%s' -l '%s' -d '%s'" % \
 			(self.scriptdir, vmfile, conffile, logfile, debugLevel)
 		# print cmdline
 		os.system(cmdline)
-		
+
 		# cleanup
 		os.unlink(vmfile)
 		os.unlink(conffile)
 
-		
+
 	def restore(self, backup, datastore):
 		"""
 		Restores the given backup to the datastore.
@@ -352,15 +352,15 @@ class GhettoVCB:
 		(f, restorefile) = mkstemp(".tmp", "ghettoVCB-restore-")
 		os.write(f, "\"%s;%s;%d\"\n" % (backup.dir, datastore.url, 3))
 		os.close(f)
-		
+
 		# run the script
-		logfile = self.logfile(backup.name, "restore")	
+		logfile = self.logfile(backup.name, "restore")
 		cmdline = "%s/ghettoVCB-restore.sh -c '%s' -l '%s'" % \
 			(self.scriptdir, restorefile, logfile)
 		# print cmdline
-		
+
 		# cleanup
-		os.system(cmdline)			
+		os.system(cmdline)
 		os.unlink(restorefile)
 
 
@@ -377,11 +377,11 @@ class GhettoUI:
 			vm = self.selectVm()
 			if vm == None:
 				return
-				
+
 			datastore = self.selectDatastore()
 			if datastore == None:
 				return
-				
+
 			options = [
 				('info',   'info   - Standard output'),
 				('debug',  'debug  - Debug output'),
@@ -392,56 +392,58 @@ class GhettoUI:
 			if level:
 				GhettoVCB().backup(vm, datastore, level)
 				return
-	
+
 	def actionRestore(self):
 		"""
 		Logic for performing a restore.
 		"""
 		while True:
-			datastores = VimCmd().getDatastores()		
-	 		backups = []
+			datastores = VimCmd().getDatastores()
+			backups = []
 			for datastore in datastores:
 				datastorebackupdir = "%s/BACKUPS" % datastore.url
-				vms = os.listdir(datastorebackupdir)
-				for vm in vms:
-					vmbackupdir = "%s/BACKUPS/%s" % (datastore.url, vm)
-					dirs = os.listdir(vmbackupdir) 
-					for backupdir in dirs: 
-						backup = Backup()
-						backup.name = vm
-						backup.dir = "%s/%s" % (vmbackupdir, backupdir)
-						backup.datastore = datastore
-						backup.datetime = backupdir
-						backups.append(backup)
-					
+				try:
+					vms = os.listdir(datastorebackupdir)
+					for vm in vms:
+						vmbackupdir = "%s/BACKUPS/%s" % (datastore.url, vm)
+						dirs = os.listdir(vmbackupdir)
+						for backupdir in dirs:
+							backup = Backup()
+							backup.name = vm
+							backup.dir = "%s/%s" % (vmbackupdir, backupdir)
+							backup.datastore = datastore
+							backup.datetime = backupdir
+							backups.append(backup)
+				except OSError:
+					print "error"
 			options = []
 			for backup in backups:
 				options.append((backup, "%s (%s)" % (backup.name, backup.datetime)))
-			
+
 			backup = Menu().show("Select a backup to restore", "Return", options)
 			if backup == None:
 				return
-				
+
 			datastore = self.selectDatastore()
-			if datastore == None: 
+			if datastore == None:
 				return;
-				
+
 			yesno = Menu().yesno("Do you want to restore '%s' to '%s'?" % (backup.datetime, datastore.name))
 			if yesno == "yes":
 				GhettoVCB().restore(backup, datastore)
 				return
-				
+
 	def selectAction(self):
 		"""
 		Shows the menu for the available actions.
 		"""
 		options = [
-			("backup", "Backup a virtual machine"), 
+			("backup", "Backup a virtual machine"),
 			("restore", "Restore a virtual machine")
 		];
 		return Menu().show("What do you want to do?", "Quit", options)
-		
-		
+
+
 	def selectDatastore(self):
 		"""
 		Shows the menu for selecting one of the available
@@ -450,10 +452,11 @@ class GhettoUI:
 		datastores = VimCmd().getDatastores()
 		options = []
 		for datastore in datastores:
-			options.append((datastore, "%s (%s)" % (datastore.name, datastore.type)))
+			if datastore.accessible:
+				options.append((datastore, "%s (%s)" % (datastore.name, datastore.type)))
 		return Menu().show("Select a datastore", "Return", options)
-		
-		
+
+
 	def selectVm(self):
 		"""
 		Shows the menu for the available virtual machines.
@@ -462,8 +465,8 @@ class GhettoUI:
 		options = []
 		for vm in vms:
 			options.append((vm, vm.name))
-		return Menu().show("Select a virtual machine", "Return", options)		
-			
+		return Menu().show("Select a virtual machine", "Return", options)
+
 	def run(self):
 		"""
 		Main runloop.
@@ -480,3 +483,4 @@ class GhettoUI:
 
 if __name__ == '__main__':
 	GhettoUI().run()
+
