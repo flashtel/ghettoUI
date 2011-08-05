@@ -42,7 +42,7 @@ import time
 import tempfile
 from datetime import datetime
 
-version = "0.7.1"
+version = "0.7.2"
 
 # subdirectory for backups on the datastore
 backupDir = "BACKUPS"
@@ -224,7 +224,7 @@ class Menu:
 
 		print
 		print "ghettoUI Menu %s" % (version)
-		print "-----------------"
+		print "-------------------"
 		print
 		print prompt
 		print
@@ -341,7 +341,7 @@ class GhettoVCB:
 
 		# run the script
 		logfile = self.logfile(vm.name, "backup")
-		cmdline = "%s/ghettoVCB.sh -f '%s' -g '%s' -l '%s' -d '%s'" % \
+		cmdline = "/bin/sh %s/ghettoVCB.sh -f '%s' -g '%s' -l '%s' -d '%s'" % \
 			(self.scriptdir, vmfile, conffile, logfile, debugLevel)
 		os.system(cmdline)
 
@@ -357,7 +357,7 @@ class GhettoVCB:
 
 		# run the script
 		logfile = self.logfile(backup.name, "restore")
-		cmdline = "%s/ghettoVCB-restore.sh -c '%s' -l '%s'" % \
+		cmdline = "/bin/sh %s/ghettoVCB-restore.sh -c '%s' -l '%s'" % \
 			(self.scriptdir, restorefile, logfile)
 		os.system(cmdline)
 

@@ -8,6 +8,12 @@ It is really easy to use. Just put **ghettoUI**, **ghettoVCB.sh** and **ghettoVC
 
 To perform a restore **ghettoUI** checks the available datastores for valid backups and offers an interactive menu for a restore. 
 
+## Installation
+
+To install **ghettoUI** just copy the files **ghettoUI**, **ghettoVCB.sh** and **ghettoVCB-restore.sh** into a directory accessible to your ESXi host and you're done. You can then run **ghettoUI** like this
+
+<pre># python ghettoUI</pre>
+
 ## How it works
 
 ghettoUI is a python script which uses just the available python interpreter and the **vim-cmd** to extract information about virtual machines and datastores from the current host. No other tools or libraries are necessary.
@@ -19,6 +25,12 @@ To perform a backup **ghettoUI** lists the available virtual machines and datast
 To perform a restore ghettoUI looks for **BACKUPS** directories in all available datastores. This name is configurable in the **backupDir** variable at the top of the script. It assumes the directory structure **/path/to/datastore/BACKUPS/vm/backup** and presents the user with an interactive menu. After the user has made a choice **ghettoUI** again creates the necessary configuration files and runs the **ghettoVCB-restore.sh** script.
 
 ## Version History
+
+0.7.2 - 05 Aug 2011
+-------------------
+
+ * The ghettoVCB scripts no longer require the executable bit set
+ * Updated the documentation on how to run ghettoVCB
 
 0.7.1 - 29 Jul 2011
 -------------------
@@ -56,10 +68,10 @@ ghettoUI
 ghettoVCB-restore.sh
 ghettoVCB.sh
 
-/vmfs/volumes/23ed4bf3-6292d161 # ./ghettoUI
+/vmfs/volumes/23ed4bf3-6292d161 # python ghettoUI
 
-ghettoUI Menu 0.7
------------------
+ghettoUI Menu 0.7.2
+-------------------
 
 What do you want to do?
 
@@ -70,8 +82,8 @@ What do you want to do?
 
 (ENTER: 1) > 
 
-ghettoUI Menu 0.7
------------------
+ghettoUI Menu 0.7.2
+-------------------
 
 Select a virtual machine
 
@@ -94,8 +106,8 @@ Select a virtual machine
 
 > 8
 
-ghettoUI Menu 0.7
------------------
+ghettoUI Menu 0.7.2
+-------------------
 
 Select a datastore
 
@@ -106,8 +118,8 @@ Select a datastore
 
 > 2
 
-ghettoUI Menu 0.7
------------------
+ghettoUI Menu 0.7.2
+-------------------
 
 Do you want to backup 'server-2' onto 'nfs1'?
 
@@ -119,8 +131,8 @@ Do you want to backup 'server-2' onto 'nfs1'?
 
 (ENTER: 3) > 2
 
-ghettoUI Menu 0.7
------------------
+ghettoUI Menu 0.7.2
+-------------------
 
 Start backup
 
@@ -160,8 +172,8 @@ EMAIL_FROM=
 
 Press ENTER to continue
 
-ghettoUI Menu 0.7
------------------
+ghettoUI Menu 0.7.2
+-------------------
 
 Start backup
 
@@ -246,8 +258,8 @@ Clone: 95% done.
 2011-07-29 10:53:37 -- info: === ghettoVCB LOG END ===
 
 
-ghettoUI Menu 0.7
------------------
+ghettoUI Menu 0.7.2
+-------------------
 
 What do you want to do?
 
