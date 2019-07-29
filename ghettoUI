@@ -42,7 +42,7 @@ import time
 import tempfile
 from datetime import datetime
 
-version = "0.7.2"
+version = "0.7.3"
 
 # subdirectory for backups on the datastore
 backupDir = "BACKUPS"
@@ -355,7 +355,6 @@ class GhettoVCB:
                 s = ("\"%s;%s;%d\"\n" % (backup.dir, datastore.url, 3))
                 line = str.encode(s)
                 os.write(f, line)
-#                os.write(f, "\"%s;%s;%d\"\n" % (backup.dir, datastore.url, 3))
                 os.close(f)
 
                 # run the script
