@@ -26,6 +26,10 @@ To perform a restore ghettoUI looks for **BACKUPS** directories in all available
 
 ## Version History
 
+0.7.3 - 29 Jul 2019
+
+Updated the ghettoUI to work with ESXi 6.7 (Python3)
+
 0.7.2 - 05 Aug 2011
 -------------------
 
